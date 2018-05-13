@@ -6,7 +6,7 @@ namespace Jqqjj\SecurityApi;
 use DOMDocument;
 use Jqqjj\SecurityApi\Exception\SecurityApiException;
 
-class RequestEntity
+class ResponseEntity
 {
     private $name;
     private $params;
@@ -21,7 +21,7 @@ class RequestEntity
     
     public static function loadFromString($content)
     {
-        
+        //return new static();
     }
     
     public function getName()
@@ -36,13 +36,13 @@ class RequestEntity
     
     public function getContent()
     {
-        $request = $this->xml->createElement('request');
-        $this->xml->appendChild($request);
+        $response = $this->xml->createElement('response');
+        $this->xml->appendChild($response);
         
         $name = $this->xml->createElement('name', $this->name);
-        $request->appendChild($name);
+        $response->appendChild($name);
         $params = $this->xml->createElement('params');
-        $request->appendChild($params);
+        $response->appendChild($params);
         
         foreach ($this->params as $node_name=>$node_value){
             if(!preg_match('/^[a-zA-Z_]/', $node_name)){

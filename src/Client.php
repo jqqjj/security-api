@@ -5,6 +5,7 @@ namespace Jqqjj\SecurityApi;
 
 use Jqqjj\SecurityApi\Encrypt;
 use Jqqjj\SecurityApi\RequestEntity;
+use Jqqjj\SecurityApi\ResponseEntity;
 
 class Client
 {
@@ -45,7 +46,7 @@ class Client
         
         $response = $this->executeRequest($this->api_url."?".http_build_query($pulbic_query),$encrypted_content);
         
-        
+        $response_entity = ResponseEntity::loadFromString($response);
     }
     
     public function executeRequest($url,$content)
