@@ -8,12 +8,12 @@ use Jqqjj\SecurityApi\Exception\SecurityApiException;
 class Encrypt
 {
     private $method = "AES-256-CBC";
-    private $key = null;
+    private $token = null;
     
-    public function __construct($key = null)
+    public function __construct($token = null)
     {
-        if(!empty($key)){
-            $this->key = $key;
+        if(!empty($token)){
+            $this->token = $token;
         }
     }
     
@@ -22,7 +22,7 @@ class Encrypt
         $ivSize = openssl_cipher_iv_length($this->method);
         $iv = openssl_random_pseudo_bytes($ivSize);
         
-        $encrypted = openssl_encrypt($data, $this->method, $this->getKey(), OPENSSL_RAW_DATA, $iv);
+        $encrypted = openssl_encrypt($data, $this->method, $this->getToken(), OPENSSL_RAW_DATA, $iv);
         
         return $iv . $encrypted;
     }
@@ -32,21 +32,21 @@ class Encrypt
         $ivSize = openssl_cipher_iv_length($this->method);
         $iv = substr($data, 0, $ivSize);
         
-        return openssl_decrypt(substr($data, $ivSize), $this->method, $this->getKey(), OPENSSL_RAW_DATA, $iv);
+        return openssl_decrypt(substr($data, $ivSize), $this->method, $this->getToken(), OPENSSL_RAW_DATA, $iv);
     }
     
-    public function setKey($key)
+    public function setToken($token)
     {
-        $this->key = $key;
+        $this->token = $token;
     }
     
-    public function getKey()
+    public function getToken()
     {
-        if(empty($this->key)){
-            throw new SecurityApiException("Encrypt key is empty");
+        if(empty($this->token)){
+            throw new SecurityApiException("Encrypt token is empty");
         }
         
-        return $this->key;
+        return $this->token;
     }
     
     public function getMethod()

@@ -4,29 +4,76 @@
 namespace Jqqjj\SecurityApi;
 
 use Jqqjj\SecurityApi\Encrypt;
-use Jqqjj\SecurityApi\XmlContent;
+use Jqqjj\SecurityApi\XmlEntity;
 
 class Client
 {
-    private $api_uri;
+    private $api_url;
     private $encrypt;
     
-    public function __construct($api_uri,Encrypt $encrypt)
+    public function __construct($api_url,Encrypt $encrypt)
     {
-        $this->api_uri = $api_uri;
+        $this->api_url = $api_url;
         $this->encrypt = $encrypt;
     }
     
-    public function getApiUri()
+    public function getApiUrl()
     {
-        return $this->api_uri;
+        return $this->api_url;
     }
     
-    public function call($action, Array $params)
+    public function callApi($action, Array $params)
     {
-        $xmlBodyManager = new XmlContent();
-        $content = $xmlBodyManager->create($action,$params);
-        $encrypted_content = $this->encrypt->encrypt($content);
-        return $this->executeRequest($encrypted_content);
+        $xml_entity = new XmlEntity($action,$params);
+        $encrypted_content = $this->encrypt->encrypt($xml_entity->getContent());
+        
+        $pulbic_query = [
+            'timestamp'=>time(),
+            'nonce'=> $this->randomString(6),
+        ];
+        $signature_query = array_merge($pulbic_query,[
+            'token'=> $this->encrypt->getToken(),
+        ]);
+        ksort($signature_query);
+        
+        $signature_string = "";
+        foreach ($signature_query as $key=>$value){
+            $signature_string .= $key.$value;
+        }
+        $signature_string .= $encrypted_content;
+        $pulbic_query['signature'] = md5($signature_string);
+        
+        return $this->executeRequest($this->api_url."?".http_build_query($pulbic_query),$encrypted_content);
+    }
+    
+    public function executeRequest($url,$content)
+    {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//不直接输出，返回结果变量
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);//自动重定向
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);//自动重定向数次限制
+        curl_setopt($ch, CURLOPT_TIMEOUT, 5);//超时秒数
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Content-type: application/octet-stream',
+            'Content-length: '. strlen($content),
+        ]);//自定义header头
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
+        $output = curl_exec($ch);
+        curl_close($ch);
+        return $output;
+    }
+    
+    private function randomString($len)
+    {
+        //生成连接密码
+        $random = '';
+        $chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+        for($i=0;$i<$len;$i++)
+        {
+            $random .= $chars{array_rand(str_split($chars))};
+        }
+        return $random;
     }
 }
