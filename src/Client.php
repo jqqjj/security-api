@@ -4,7 +4,7 @@
 namespace Jqqjj\SecurityApi;
 
 use Jqqjj\SecurityApi\Encrypt;
-use Jqqjj\SecurityApi\XmlEntity;
+use Jqqjj\SecurityApi\RequestEntity;
 
 class Client
 {
@@ -22,10 +22,10 @@ class Client
         return $this->api_url;
     }
     
-    public function callApi($action, Array $params)
+    public function callApi($name, Array $params)
     {
-        $xml_entity = new XmlEntity($action,$params);
-        $encrypted_content = $this->encrypt->encrypt($xml_entity->getContent());
+        $entity = new RequestEntity($name,$params);
+        $encrypted_content = $this->encrypt->encrypt($entity->getContent());
         
         $pulbic_query = [
             'timestamp'=>time(),
@@ -43,7 +43,9 @@ class Client
         $signature_string .= $encrypted_content;
         $pulbic_query['signature'] = md5($signature_string);
         
-        return $this->executeRequest($this->api_url."?".http_build_query($pulbic_query),$encrypted_content);
+        $response = $this->executeRequest($this->api_url."?".http_build_query($pulbic_query),$encrypted_content);
+        
+        
     }
     
     public function executeRequest($url,$content)
