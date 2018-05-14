@@ -4,7 +4,7 @@
 namespace Jqqjj\SecurityApi;
 
 use DOMDocument;
-use Jqqjj\SecurityApi\Exception\SecurityApiException;
+use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
 
 class RequestEntity
 {
@@ -46,7 +46,7 @@ class RequestEntity
         
         foreach ($this->params as $node_name=>$node_value){
             if(!preg_match('/^[a-zA-Z_]/', $node_name)){
-                throw new SecurityApiException("Index name of each param must be a letter.[{$node_name}] presents.");
+                throw new RequestParamsException("Index name of each param must be a letter.[{$node_name}] presents.");
             }
             $params->appendChild($this->createParamsElement($node_name,$node_value));
         }
@@ -64,7 +64,7 @@ class RequestEntity
                 }elseif(preg_match('/^([0-9]|[1-9]\d+)$/', $k)){
                     $child_element = $this->createParamsElement($k, $v);
                 }else{
-                    throw new SecurityApiException("Prefix of node name must be a letter.[{$k}] presents.");
+                    throw new RequestParamsException("Prefix of node name must be a letter.[{$k}] presents.");
                 }
                 $element->appendChild($child_element);
             }

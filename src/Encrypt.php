@@ -3,18 +3,14 @@
 
 namespace Jqqjj\SecurityApi;
 
-use Jqqjj\SecurityApi\Exception\SecurityApiException;
-
 class Encrypt
 {
     private $method = "AES-256-CBC";
     private $token = null;
     
-    public function __construct($token = null)
+    public function __construct($token)
     {
-        if(!empty($token)){
-            $this->token = $token;
-        }
+        $this->token = $token;
     }
     
     public function encrypt($data)
@@ -35,17 +31,8 @@ class Encrypt
         return openssl_decrypt(substr($data, $ivSize), $this->method, $this->getToken(), OPENSSL_RAW_DATA, $iv);
     }
     
-    public function setToken($token)
-    {
-        $this->token = $token;
-    }
-    
     public function getToken()
     {
-        if(empty($this->token)){
-            throw new SecurityApiException("Encrypt token is empty");
-        }
-        
         return $this->token;
     }
     
