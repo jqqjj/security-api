@@ -6,6 +6,7 @@ namespace Jqqjj\SecurityApi;
 use Jqqjj\SecurityApi\Encrypt;
 use Jqqjj\SecurityApi\RequestEntity;
 use Jqqjj\SecurityApi\ResponseEntity;
+use Jqqjj\SecurityApi\HttpReuest;
 
 class Client
 {
@@ -44,7 +45,11 @@ class Client
         $signature_string .= $encrypted_content;
         $pulbic_query['signature'] = md5($signature_string);
         
-        $response = $this->executeRequest($this->api_url."?".http_build_query($pulbic_query),$encrypted_content);
+        $request = new HttpReuest();
+        $response = $request->to($this->api_url."?".http_build_query($pulbic_query))->withHeader([
+            'Content-type: application/octet-stream',
+            'Content-length: '. strlen($encrypted_content),
+        ])->withData($encrypted_content)->RedirectDepth()->post();
         
         $response_entity = ResponseEntity::loadFromString($response);
     }
