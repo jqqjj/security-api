@@ -12,10 +12,10 @@ class Client
     private $api_url;
     private $encrypt;
     
-    public function __construct($api_url,Encrypt $encrypt)
+    public function __construct($api_url,$secret)
     {
         $this->api_url = $api_url;
-        $this->encrypt = $encrypt;
+        $this->encrypt = new Encrypt($secret);
     }
     
     public function getApiUrl()
