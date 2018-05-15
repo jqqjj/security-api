@@ -5,6 +5,7 @@ namespace Jqqjj\SecurityApi;
 
 use DOMDocument;
 use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
+use Exception;
 
 class RequestEntity
 {
@@ -23,7 +24,11 @@ class RequestEntity
     {
         /*$entity_content = preg_replace('/^<\?xml.+?\?>/', '', $string);*/
         $xml = new DOMDocument('1.0','UTF-8');
-        $xml->loadXML($string);
+        try{
+            $xml->loadXML($string);
+        } catch (Exception $ex) {
+            throw new RequestParamsException('XML structure error.');
+        }
         
         $request_dom = $xml->getElementsByTagName('request');
         if(count($request_dom)!=1){
@@ -46,23 +51,45 @@ class RequestEntity
     
     protected static function parseParams($node)
     {
-        $values = [];
         if(!$node->hasAttribute('type')){
             throw new RequestParamsException('XML structure error.');
         }
+        
         $type = $node->getAttribute('type');
-        switch ($type){
+        switch (strtolower($type)){
             case "array":
-                
+                $value = [];
+                foreach ($node->childNodes as $node){
+                    //检查数字索引是否完整
+                    if($node->hasAttribute('item') && !$node->hasAttribute('index')){
+                        throw new RequestParamsException('XML structure error.');
+                    }
+                    $index_name = $node->hasAttribute('item') ? intval($node->getAttribute('index')) : $node->nodeName;
+                    $value[$index_name] = self::parseParams($node);
+                }
                 break;
-            default :
-                
+            case "integer":
+                $value = intval(base64_decode($node->nodeValue));
+                break;
+            case "boolean":
+                $value = boolval(base64_decode($node->nodeValue));
+                break;
+            case "double":
+                $value = doubleval(base64_decode($node->nodeValue));
+                break;
+            case "float":
+                $value = floatval(base64_decode($node->nodeValue));
+                break;
+            case "null":
+                $value = null;
+                break;
+            default:
+                $value = base64_decode($node->nodeValue);
         }
-            $node_value = $node->nodeValue;
-            
-            $values[$node->getAttribute('index')] = $node->nodeValue;
+        
+        return $value;
     }
-
+    
     public function getCommand()
     {
         return $this->command;
@@ -95,7 +122,7 @@ class RequestEntity
         
         foreach ($this->params as $node_name=>$node_value){
             if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
-                throw new RequestParamsException("Index name of each param must be a letter.[{$node_name}] presents.");
+                throw new RequestParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
             }
             $params->appendChild($this->createParamsElement($node_name,$node_value));
         }
@@ -106,7 +133,7 @@ class RequestEntity
     protected function createParamsElement($node_name,$node_value)
     {
         if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name) && !preg_match('/^([0-9]|[1-9]\d+)$/', $node_name)){
-            throw new RequestParamsException("Node name must follow the rule of variable naming.[{$node_name}] presents.");
+            throw new RequestParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
         }
         if(preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
             $element = $this->getXmlDom()->createElement($node_name);
