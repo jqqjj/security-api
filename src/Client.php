@@ -7,6 +7,7 @@ use Jqqjj\SecurityApi\Encrypt;
 use Jqqjj\SecurityApi\RequestEntity;
 use Jqqjj\SecurityApi\ResponseEntity;
 use Jqqjj\SecurityApi\HttpReuest;
+use Exception;
 
 class Client
 {
@@ -24,10 +25,12 @@ class Client
         return $this->api_url;
     }
     
-    public function callApi($name, Array $params)
+    public function callApi($command, Array $params)
     {
-        $entity = new RequestEntity($name,$params);
-        $encrypted_content = $this->encrypt->encrypt($entity->getContent());
+        $request_entity = new RequestEntity($command,$params);
+        $encrypted_content = $this->encrypt->encrypt($request_entity->getXmlEntity());
+        
+        $a = RequestEntity::loadFromString($request_entity->getXmlEntity());
         
         $pulbic_query = [
             'timestamp'=>time(),
@@ -45,32 +48,22 @@ class Client
         $signature_string .= $encrypted_content;
         $pulbic_query['signature'] = md5($signature_string);
         
-        $request = new HttpReuest();
-        $response = $request->to($this->api_url."?".http_build_query($pulbic_query))->withHeader([
-            'Content-type: application/octet-stream',
-            'Content-length: '. strlen($encrypted_content),
-        ])->withData($encrypted_content)->RedirectDepth(5)->post();
-        
-        $response_entity = ResponseEntity::loadFromString($response);
-    }
-    
-    public function executeRequest($url,$content)
-    {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);//不直接输出，返回结果变量
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, 1);//自动重定向
-        curl_setopt($ch, CURLOPT_MAXREDIRS, 10);//自动重定向数次限制
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);//超时秒数
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-type: application/octet-stream',
-            'Content-length: '. strlen($content),
-        ]);//自定义header头
-        curl_setopt($ch, CURLOPT_POST, 1);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $content);
-        $output = curl_exec($ch);
-        curl_close($ch);
-        return $output;
+        try{
+            $request = new HttpReuest();
+            $request->to($this->api_url."?".http_build_query($pulbic_query))->withHeader([
+                'Content-type: application/octet-stream',
+                'Content-length: '. strlen($encrypted_content),
+            ])->withData($encrypted_content)->RedirectDepth(5)->post();
+        } catch (Exception $ex) {
+            $response_entity = new ResponseEntity($command, [
+                'ret'=>1,
+                'message'=>"Request Fail.",
+            ]);
+        }
+        //解密
+        $decrypt_content = $this->encrypt->decrypt($request->getResponseBody());
+
+        $response_entity = ResponseEntity::loadFromString($decrypt_content);
     }
     
     private function randomString($len)

@@ -8,13 +8,13 @@ use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
 
 class ResponseEntity
 {
-    private $name;
+    private $command;
     private $params;
     private $xml;
     
-    public function __construct($name,Array $params)
+    public function __construct($command,Array $params)
     {
-        $this->name = $name;
+        $this->command = $command;
         $this->params = $params;
         $this->xml = new DOMDocument('1.0','UTF-8');
     }
@@ -24,9 +24,9 @@ class ResponseEntity
         //return new static();
     }
     
-    public function getName()
+    public function getCommand()
     {
-        return $this->name;
+        return $this->command;
     }
     
     public function getParams()
@@ -39,8 +39,8 @@ class ResponseEntity
         $response = $this->xml->createElement('response');
         $this->xml->appendChild($response);
         
-        $name = $this->xml->createElement('name', $this->name);
-        $response->appendChild($name);
+        $command = $this->xml->createElement('command', $this->command);
+        $response->appendChild($command);
         $params = $this->xml->createElement('params');
         $response->appendChild($params);
         
