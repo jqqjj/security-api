@@ -9,18 +9,16 @@ use Exception;
 
 class ResponseEntity
 {
-    private $command;
     private $ret;
     private $message;
     private $params;
     private $xmlDom;
     private $xmlEntity;
     
-    public function __construct($ret,$message,$command,Array $params)
+    public function __construct($ret,$message,Array $params)
     {
         $this->ret = $ret;
         $this->message = $message;
-        $this->command = $command;
         $this->params = $params;
     }
     
@@ -40,21 +38,19 @@ class ResponseEntity
         }
         $ret_node = $response_dom->item(0)->getElementsByTagName('ret');
         $message_node = $response_dom->item(0)->getElementsByTagName('message');
-        $command_node = $response_dom->item(0)->getElementsByTagName('command');
         $params_node = $response_dom->item(0)->getElementsByTagName('params');
-        if(count($ret_node)!=1 || count($message_node)!=1 || count($command_node)!=1 || count($params_node)!=1){
+        if(count($ret_node)!=1 || count($message_node)!=1 || count($params_node)!=1){
             throw new ParamsException('XML structure error.');
         }
         
         $ret = $ret_node->item(0)->nodeValue;
         $message = $message_node->item(0)->nodeValue;
-        $command = $command_node->item(0)->nodeValue;
         $params = [];
         foreach ($params_node->item(0)->childNodes as $node){
             $params[$node->nodeName] = self::parseParams($node);
         }
         
-        return new static($ret,$message,$command,$params);
+        return new static($ret,$message,$params);
     }
     
     protected static function parseParams($node)
@@ -108,11 +104,6 @@ class ResponseEntity
         return $this->message;
     }
     
-    public function getCommand()
-    {
-        return $this->command;
-    }
-    
     public function getParams()
     {
         return $this->params;
@@ -135,10 +126,8 @@ class ResponseEntity
         
         $ret = $xmlDom->createElement('ret', $this->ret);
         $message = $xmlDom->createElement('message', $this->message);
-        $command = $xmlDom->createElement('command', $this->command);
         $response->appendChild($ret);
         $response->appendChild($message);
-        $response->appendChild($command);
         $params = $xmlDom->createElement('params');
         $response->appendChild($params);
         
