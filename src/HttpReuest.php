@@ -3,8 +3,7 @@
 
 namespace Jqqjj\SecurityApi;
 
-use Jqqjj\SecurityApi\Exceptions\RequestNetworkException;
-use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
+use Exception;
 
 class HttpReuest
 {
@@ -26,16 +25,13 @@ class HttpReuest
     //response info
     protected $responseStatusCode = 0;
     protected $ResponseHeader = [];
-    protected $responseHeaderSize = 0;
     protected $responseBody = null;
-    protected $responseBodySize = 0;
-    
     
     public function to($url)
     {
         $url_info = parse_url($url);
         if(empty($url_info['scheme']) || !in_array($url_info['scheme'],['http','https']) || empty($url_info['host'])){
-            throw new RequestParamsException("Request URL is invalid.");
+            throw new Exception("URL is invalid.");
         }
         $this->url = $url;
         $this->scheme = $url_info['scheme'];
@@ -92,12 +88,27 @@ class HttpReuest
         return $this->send($this->url,$this->requestBody);
     }
     
+    public function getResponseStatusCode()
+    {
+        return $this->responseStatusCode;
+    }
+    
+    public function getResponseHeader()
+    {
+        return $this->ResponseHeader;
+    }
+    
+    public function getResponseBody()
+    {
+        return $this->responseBody;
+    }
+    
     protected function send($url,$content)
     {
         $depth = $this->redirectDepth;
         do{
             if(in_array($this->responseStatusCode, [301,302]) && (empty($this->ResponseHeader) || empty($this->ResponseHeader['Location']))){
-                throw new RequestNetworkException("Curl get a bad response.");
+                throw new Exception("Curl get a bad response.");
             }
             if(in_array($this->responseStatusCode, [301,302])){
                 $url_info = parse_url($this->ResponseHeader['Location']);
@@ -108,12 +119,12 @@ class HttpReuest
             }
             $curlErrno = $this->execute($url, $content);
             if($curlErrno){
-                throw new RequestNetworkException("Curl Request Error:{$curlErrno}");
+                throw new Exception("Curl Error:{$curlErrno}");
             }
         }while(in_array($this->responseStatusCode, [301,302]) && $depth-- > 0);
         
-        if(in_array($this->responseStatusCode, [301,302])){
-            throw new RequestNetworkException("Redirection times is greater than:{$this->redirectDepth}");
+        if($this->redirectDepth && in_array($this->responseStatusCode, [301,302])){
+            throw new Exception("Redirection times is greater than:{$this->redirectDepth}");
         }
         
         return $this;
@@ -159,13 +170,9 @@ class HttpReuest
             if(strpos($output, "\r\n\r\n")!==false){
                 list($header, $body) = explode("\r\n\r\n", $output, 2);
                 $this->responseBody = $body;
-                $this->responseBodySize = strlen($body);
-                $this->responseHeaderSize = strlen($header);
                 $this->ResponseHeader = $this->parseHeaderFromString($header);
             }else{
                 $this->responseBody = "";
-                $this->responseBodySize = 0;
-                $this->responseHeaderSize = strlen($output);
                 $this->ResponseHeader = $this->parseHeaderFromString($output);
             }
         }
