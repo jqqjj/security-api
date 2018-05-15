@@ -12,12 +12,14 @@ use Exception;
 class Client
 {
     private $api_url;
+    private $appid;
     private $encrypt;
     
-    public function __construct($api_url,$secret)
+    public function __construct($api_url,$appid,$app_secret)
     {
         $this->api_url = $api_url;
-        $this->encrypt = new Encrypt($secret);
+        $this->appid = $appid;
+        $this->encrypt = new Encrypt($app_secret);
     }
     
     public function getApiUrl()
@@ -30,9 +32,8 @@ class Client
         $request_entity = new RequestEntity($command,$params);
         $encrypted_content = $this->encrypt->encrypt($request_entity->getXmlEntity());
         
-        $a = RequestEntity::loadFromString($request_entity->getXmlEntity());
-        
         $pulbic_query = [
+            'appid'=> $this->appid,
             'timestamp'=>time(),
             'nonce'=> $this->randomString(6),
         ];
@@ -55,15 +56,24 @@ class Client
                 'Content-length: '. strlen($encrypted_content),
             ])->withData($encrypted_content)->RedirectDepth(5)->post();
         } catch (Exception $ex) {
-            $response_entity = new ResponseEntity($command, [
+            return [
+                'command'=>$command,
                 'ret'=>1,
-                'message'=>"Request Fail.",
-            ]);
+                'message'=>'Request Fail.',
+                'data'=>[],
+            ];
         }
         //解密
         $decrypt_content = $this->encrypt->decrypt($request->getResponseBody());
-
+        
         $response_entity = ResponseEntity::loadFromString($decrypt_content);
+        
+        return [
+            'command'=>$response_entity->getCommand(),
+            'ret'=>$response_entity->getParams(),
+            'message'=>'Request Fail.',
+            'data'=>$response_entity->getParams(),
+        ];
     }
     
     private function randomString($len)

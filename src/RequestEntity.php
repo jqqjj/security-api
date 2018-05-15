@@ -4,7 +4,7 @@
 namespace Jqqjj\SecurityApi;
 
 use DOMDocument;
-use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
+use Jqqjj\SecurityApi\Exceptions\ParamsException;
 use Exception;
 
 class RequestEntity
@@ -27,17 +27,17 @@ class RequestEntity
         try{
             $xml->loadXML($string);
         } catch (Exception $ex) {
-            throw new RequestParamsException('XML structure error.');
+            throw new ParamsException('XML structure error.');
         }
         
         $request_dom = $xml->getElementsByTagName('request');
         if(count($request_dom)!=1){
-            throw new RequestParamsException('XML structure error.');
+            throw new ParamsException('XML structure error.');
         }
         $command_node = $request_dom->item(0)->getElementsByTagName('command');
         $params_node = $request_dom->item(0)->getElementsByTagName('params');
         if(count($command_node)!=1 || count($params_node)!=1){
-            throw new RequestParamsException('XML structure error.');
+            throw new ParamsException('XML structure error.');
         }
         
         $command = $command_node->item(0)->nodeValue;
@@ -52,7 +52,7 @@ class RequestEntity
     protected static function parseParams($node)
     {
         if(!$node->hasAttribute('type')){
-            throw new RequestParamsException('XML structure error.');
+            throw new ParamsException('XML structure error.');
         }
         
         $type = $node->getAttribute('type');
@@ -62,7 +62,7 @@ class RequestEntity
                 foreach ($node->childNodes as $node){
                     //检查数字索引是否完整
                     if($node->hasAttribute('item') && !$node->hasAttribute('index')){
-                        throw new RequestParamsException('XML structure error.');
+                        throw new ParamsException('XML structure error.');
                     }
                     $index_name = $node->hasAttribute('item') ? intval($node->getAttribute('index')) : $node->nodeName;
                     $value[$index_name] = self::parseParams($node);
@@ -122,7 +122,7 @@ class RequestEntity
         
         foreach ($this->params as $node_name=>$node_value){
             if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
-                throw new RequestParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
+                throw new ParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
             }
             $params->appendChild($this->createParamsElement($node_name,$node_value));
         }
@@ -133,7 +133,7 @@ class RequestEntity
     protected function createParamsElement($node_name,$node_value)
     {
         if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name) && !preg_match('/^([0-9]|[1-9]\d+)$/', $node_name)){
-            throw new RequestParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
+            throw new ParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
         }
         if(preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
             $element = $this->getXmlDom()->createElement($node_name);

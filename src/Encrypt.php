@@ -22,7 +22,7 @@ class Encrypt
         
         return $iv . $encrypted;
     }
-
+    
     public function decrypt($data)
     {
         $ivSize = openssl_cipher_iv_length($this->method);

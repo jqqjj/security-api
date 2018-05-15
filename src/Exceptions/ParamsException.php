@@ -2,7 +2,7 @@
 
 namespace Jqqjj\SecurityApi\Exceptions;
 
-class RequestNetworkException extends \RuntimeException
+class ParamsException extends \RuntimeException
 {
     
 }

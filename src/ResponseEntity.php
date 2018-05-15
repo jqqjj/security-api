@@ -4,24 +4,108 @@
 namespace Jqqjj\SecurityApi;
 
 use DOMDocument;
-use Jqqjj\SecurityApi\Exceptions\RequestParamsException;
+use Jqqjj\SecurityApi\Exceptions\ParamsException;
+use Exception;
 
 class ResponseEntity
 {
     private $command;
+    private $ret;
+    private $message;
     private $params;
-    private $xml;
+    private $xmlDom;
+    private $xmlEntity;
     
-    public function __construct($command,Array $params)
+    public function __construct($ret,$message,$command,Array $params)
     {
+        $this->ret = $ret;
+        $this->message = $message;
         $this->command = $command;
         $this->params = $params;
-        $this->xml = new DOMDocument('1.0','UTF-8');
     }
     
-    public static function loadFromString($content)
+    public static function loadFromString($string)
     {
-        //return new static();
+        /*$entity_content = preg_replace('/^<\?xml.+?\?>/', '', $string);*/
+        $xml = new DOMDocument('1.0','UTF-8');
+        try{
+            $xml->loadXML($string);
+        } catch (Exception $ex) {
+            throw new ParamsException('XML structure error.');
+        }
+        
+        $response_dom = $xml->getElementsByTagName('response');
+        if(count($response_dom)!=1){
+            throw new ParamsException('XML structure error.');
+        }
+        $ret_node = $response_dom->item(0)->getElementsByTagName('ret');
+        $message_node = $response_dom->item(0)->getElementsByTagName('message');
+        $command_node = $response_dom->item(0)->getElementsByTagName('command');
+        $params_node = $response_dom->item(0)->getElementsByTagName('params');
+        if(count($ret_node)!=1 || count($message_node)!=1 || count($command_node)!=1 || count($params_node)!=1){
+            throw new ParamsException('XML structure error.');
+        }
+        
+        $ret = $ret_node->item(0)->nodeValue;
+        $message = $message_node->item(0)->nodeValue;
+        $command = $command_node->item(0)->nodeValue;
+        $params = [];
+        foreach ($params_node->item(0)->childNodes as $node){
+            $params[$node->nodeName] = self::parseParams($node);
+        }
+        
+        return new static($ret,$message,$command,$params);
+    }
+    
+    protected static function parseParams($node)
+    {
+        if(!$node->hasAttribute('type')){
+            throw new ParamsException('XML structure error.');
+        }
+        
+        $type = $node->getAttribute('type');
+        switch (strtolower($type)){
+            case "array":
+                $value = [];
+                foreach ($node->childNodes as $node){
+                    //检查数字索引是否完整
+                    if($node->hasAttribute('item') && !$node->hasAttribute('index')){
+                        throw new ParamsException('XML structure error.');
+                    }
+                    $index_name = $node->hasAttribute('item') ? intval($node->getAttribute('index')) : $node->nodeName;
+                    $value[$index_name] = self::parseParams($node);
+                }
+                break;
+            case "integer":
+                $value = intval(base64_decode($node->nodeValue));
+                break;
+            case "boolean":
+                $value = boolval(base64_decode($node->nodeValue));
+                break;
+            case "double":
+                $value = doubleval(base64_decode($node->nodeValue));
+                break;
+            case "float":
+                $value = floatval(base64_decode($node->nodeValue));
+                break;
+            case "null":
+                $value = null;
+                break;
+            default:
+                $value = base64_decode($node->nodeValue);
+        }
+        
+        return $value;
+    }
+    
+    public function getRet()
+    {
+        return $this->ret;
+    }
+    
+    public function getMessage()
+    {
+        return $this->message;
     }
     
     public function getCommand()
@@ -34,48 +118,59 @@ class ResponseEntity
         return $this->params;
     }
     
-    public function getContent()
+    public function getXmlEntity()
     {
-        $response = $this->xml->createElement('response');
-        $this->xml->appendChild($response);
+        if(empty($this->xmlEntity)){
+            $this->xmlEntity = $this->createXmlEntity();
+        }
         
-        $command = $this->xml->createElement('command', $this->command);
+        return $this->xmlEntity;
+    }
+    
+    protected function createXmlEntity()
+    {
+        $xmlDom = $this->getXmlDom(true);
+        $response = $xmlDom->createElement('response');
+        $xmlDom->appendChild($response);
+        
+        $ret = $xmlDom->createElement('ret', $this->ret);
+        $message = $xmlDom->createElement('message', $this->message);
+        $command = $xmlDom->createElement('command', $this->command);
+        $response->appendChild($ret);
+        $response->appendChild($message);
         $response->appendChild($command);
-        $params = $this->xml->createElement('params');
+        $params = $xmlDom->createElement('params');
         $response->appendChild($params);
         
         foreach ($this->params as $node_name=>$node_value){
-            if(!preg_match('/^[a-zA-Z_]/', $node_name)){
-                throw new RequestParamsException("Index name of each param must be a letter.[{$node_name}] presents.");
+            if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
+                throw new ParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
             }
             $params->appendChild($this->createParamsElement($node_name,$node_value));
         }
         
-        return $this->xml->saveXML();
+        return $this->getXmlDom()->saveXML();
     }
     
-    private function createParamsElement($node_name,$node_value)
+    protected function createParamsElement($node_name,$node_value)
     {
+        if(!preg_match('/^[a-zA-Z_](\w)*/', $node_name) && !preg_match('/^([0-9]|[1-9]\d+)$/', $node_name)){
+            throw new ParamsException("Node name must follow the rule of variable's naming.[{$node_name}] presents.");
+        }
+        if(preg_match('/^[a-zA-Z_](\w)*/', $node_name)){
+            $element = $this->getXmlDom()->createElement($node_name);
+        }else{
+            $element = $this->getXmlDom()->createElement('item');
+            $element->setAttribute('item','true');
+            $element->setAttribute('index',$node_name);
+        }
         if(is_array($node_value)){
-            $element = $this->xml->createElement($node_name);
             foreach ($node_value as $k=>$v){
-                if(preg_match('/^[a-zA-Z_]/', $k)){
-                    $child_element = $this->createParamsElement($k, $v);
-                }elseif(preg_match('/^([0-9]|[1-9]\d+)$/', $k)){
-                    $child_element = $this->createParamsElement($k, $v);
-                }else{
-                    throw new RequestParamsException("Prefix of node name must be a letter.[{$k}] presents.");
-                }
+                $child_element = $this->createParamsElement($k, $v);
                 $element->appendChild($child_element);
             }
         }else{
-            if(!empty($node_name) && is_string($node_name)){
-                $element = $this->xml->createElement($node_name,base64_encode($node_value));
-            }else{
-                $element = $this->xml->createElement('item',base64_encode($node_value));
-                $element->setAttribute('item','true');
-                $element->setAttribute('index',$node_name);
-            }
+            $element->nodeValue = base64_encode($node_value);
         }
         
         $element->setAttribute('type', strtolower(gettype($node_value)));
@@ -83,8 +178,16 @@ class ResponseEntity
         return $element;
     }
     
+    protected function getXmlDom($force=false)
+    {
+        if(empty($this->xmlDom) || $force){
+            $this->xmlDom = new DOMDocument('1.0','UTF-8');
+        }
+        return $this->xmlDom;
+    }
+
     public function __toString()
     {
-        return $this->getContent();
+        return $this->getXmlEntity();
     }
 }
