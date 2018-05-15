@@ -16,11 +16,11 @@ class Client
     private $appid;
     private $encrypt;
     
-    public function __construct($api_url,$appid,$app_secret)
+    public function __construct($api_url,$appid,$token)
     {
         $this->api_url = $api_url;
         $this->appid = $appid;
-        $this->encrypt = new Encrypt($app_secret);
+        $this->encrypt = new Encrypt($token);
     }
     
     public function getApiUrl()
