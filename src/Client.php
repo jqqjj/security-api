@@ -49,7 +49,7 @@ class Client
         $response = $request->to($this->api_url."?".http_build_query($pulbic_query))->withHeader([
             'Content-type: application/octet-stream',
             'Content-length: '. strlen($encrypted_content),
-        ])->withData($encrypted_content)->RedirectDepth()->post();
+        ])->withData($encrypted_content)->RedirectDepth(5)->post();
         
         $response_entity = ResponseEntity::loadFromString($response);
     }

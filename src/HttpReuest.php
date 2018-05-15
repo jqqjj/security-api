@@ -104,7 +104,7 @@ class HttpReuest
                 $scheme = empty($url_info['scheme']) ? $this->scheme : $url_info['scheme'];
                 $host = empty($url_info['host']) ? $this->host : $url_info['host'];
                 $query = empty($url_info['query']) ? "" : ("?".$url_info['query']);
-                $url = $scheme . "://" . $host .'/'. ltrim($url_info['path'],'/') . $query;
+                $url = $scheme . "://" . $host .'/'. (!empty($url_info['path'])?ltrim($url_info['path'],'/'):'') . $query;
             }
             $curlErrno = $this->execute($url, $content);
             if($curlErrno){
@@ -155,12 +155,19 @@ class HttpReuest
         curl_close($ch);
         
         if(!$curlErrno){
-            list($header, $body) = explode("\r\n\r\n", $output, 2);
             $this->responseStatusCode = $httpCode>0 ? $httpCode : 0;
-            $this->responseBody = $body;
-            $this->responseBodySize = strlen($body);
-            $this->responseHeaderSize = strlen($header);
-            $this->ResponseHeader = $this->parseHeaderFromString($header);
+            if(strpos($output, "\r\n\r\n")!==false){
+                list($header, $body) = explode("\r\n\r\n", $output, 2);
+                $this->responseBody = $body;
+                $this->responseBodySize = strlen($body);
+                $this->responseHeaderSize = strlen($header);
+                $this->ResponseHeader = $this->parseHeaderFromString($header);
+            }else{
+                $this->responseBody = "";
+                $this->responseBodySize = 0;
+                $this->responseHeaderSize = strlen($output);
+                $this->ResponseHeader = $this->parseHeaderFromString($output);
+            }
         }
         
         return $curlErrno;
