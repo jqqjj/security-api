@@ -5,6 +5,7 @@ namespace Jqqjj\SecurityApi;
 
 use Jqqjj\SecurityApi\Encrypt;
 use Jqqjj\SecurityApi\RequestEntity;
+use Jqqjj\SecurityApi\ResponseEntity;
 use Jqqjj\SecurityApi\Exceptions\ParamsException;
 
 class Server
@@ -48,11 +49,16 @@ class Server
         return $this->valid;
     }
     
-    public function response()
+    public function getResponseBody()
     {
         if(!$this->valid()){
-            
+            $response_entity = new ResponseEntity(1, "Invalid request.", ['encrypt'=>'']);
+        }else{
+            $real_entity = new ResponseEntity($this->response_ret, $this->response_message, $this->response_params);
+            $encrypted_content = $this->encrypt->encrypt($real_entity->getXmlEntity());
+            $response_entity = new ResponseEntity(0, "Success.", ['encrypt'=> $encrypted_content]);
         }
+        return $response_entity->getXmlEntity();
     }
     
     public function getCommand()
@@ -70,10 +76,15 @@ class Server
         //解密
         $decrypt_content = $this->encrypt->decrypt($string);
         if(empty($decrypt_content)){
-            throw new ParamsException("Decrypt request body fails.");
+            return false;
         }
         
-        $request_entity = RequestEntity::loadFromString($decrypt_content);
+        try{
+            $request_entity = RequestEntity::loadFromString($decrypt_content);
+        } catch (ParamsException $ex) {
+            return false;
+        }
+        
         $this->command = $request_entity->getCommand();
         $this->request_params = $request_entity->getParams();
         return true;
