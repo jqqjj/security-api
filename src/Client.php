@@ -93,7 +93,7 @@ class Client
         }
         
         //解密失败处理
-        $decrypt_content = $this->encrypt->decrypt(base64_decode($response_params['encrypt']));
+        $decrypt_content = $this->encrypt->decrypt($response_params['encrypt']);
         if(empty($decrypt_content)){
             return [
                 'ret'=>1,
