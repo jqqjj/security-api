@@ -87,8 +87,11 @@ class ResponseEntity
             case "null":
                 $value = null;
                 break;
-            default:
+            case "string":
                 $value = base64_decode($node->nodeValue);
+                break;
+            default :
+                throw new ParamsException("Unsupported data type.");
         }
         
         return $value;
@@ -162,7 +165,20 @@ class ResponseEntity
             $element->nodeValue = base64_encode($node_value);
         }
         
-        $element->setAttribute('type', strtolower(gettype($node_value)));
+        $type = strtolower(gettype($node_value));
+        switch ($type){
+            case 'boolean':
+            case 'integer':
+            case 'float':
+            case 'double':
+            case 'string':
+            case 'array':
+            case 'null':
+                $element->setAttribute('type', $type);
+                break;
+            default :
+                throw new ParamsException("Unsupported data type.");
+        }
         
         return $element;
     }
