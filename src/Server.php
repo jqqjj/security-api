@@ -15,7 +15,7 @@ class Server
     private $command;
     private $request_params;
     private $response_ret = 0;
-    private $response_message = '';
+    private $response_message = 'ok';
     private $response_params=[];
     
     public function __construct($token,array $query,$body)
