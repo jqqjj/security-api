@@ -33,13 +33,13 @@ class ResponseEntity
         }
         
         $response_dom = $xml->getElementsByTagName('response');
-        if(count($response_dom)!=1){
+        if($response_dom->length!=1){
             throw new ParamsException('XML structure error.');
         }
         $ret_node = $response_dom->item(0)->getElementsByTagName('ret');
         $message_node = $response_dom->item(0)->getElementsByTagName('message');
         $params_node = $response_dom->item(0)->getElementsByTagName('params');
-        if(count($ret_node)!=1 || count($message_node)!=1 || count($params_node)!=1){
+        if($ret_node->length!=1 || $message_node->length!=1 || $params_node->length!=1){
             throw new ParamsException('XML structure error.');
         }
         

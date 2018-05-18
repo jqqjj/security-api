@@ -31,12 +31,12 @@ class RequestEntity
         }
         
         $request_dom = $xml->getElementsByTagName('request');
-        if(count($request_dom)!=1){
+        if($request_dom->length!=1){
             throw new ParamsException('XML structure error.');
         }
         $command_node = $request_dom->item(0)->getElementsByTagName('command');
         $params_node = $request_dom->item(0)->getElementsByTagName('params');
-        if(count($command_node)!=1 || count($params_node)!=1){
+        if($command_node->length!=1 || $params_node->length!=1){
             throw new ParamsException('XML structure error.');
         }
         
