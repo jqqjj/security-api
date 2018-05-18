@@ -92,10 +92,12 @@ class Server
 
     protected function verifySignature($query,$body)
     {
-        if(isset($query['signature'])){
-            $query_signature = $query['signature'];
-            unset($query['signature']);
+        if(empty($query['signature'])){
+            return false;
         }
+        $query_signature = $query['signature'];
+        unset($query['signature']);
+        
         $signature_query = array_merge($query,[
             'token'=> $this->encrypt->getToken(),
         ]);
